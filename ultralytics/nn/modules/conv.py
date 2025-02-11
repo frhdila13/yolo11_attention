@@ -19,6 +19,7 @@ __all__ = (
     "ChannelAttention",
     "SpatialAttention",
     "CBAM",
+    "SEBlock",
     "Concat",
     "RepConv",
     "Index",
@@ -318,6 +319,24 @@ class CBAM(nn.Module):
     def forward(self, x):
         """Applies the forward pass through C1 module."""
         return self.spatial_attention(self.channel_attention(x))
+        
+
+class SEBlock(nn.Module):
+    def __init__(self, in_channels, reduction=16):
+        super(SEBlock, self).__init__()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)  # Global Average Pooling
+        self.fc = nn.Sequential(
+            nn.Linear(in_channels, in_channels // reduction, bias=False),
+            nn.ReLU(inplace=True),
+            nn.Linear(in_channels // reduction, in_channels, bias=False),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        b, c, _, _ = x.size()  # Get batch and channel dimensions
+        y = self.avg_pool(x).view(b, c)  # Squeeze operation
+        y = self.fc(y).view(b, c, 1, 1)  # Excitation operation
+        return x * y.expand_as(x)  # Recalibrate features
 
 
 class Concat(nn.Module):
