@@ -60,6 +60,7 @@ from ultralytics.nn.modules import (
     RTDETRDecoder,
     SCDown,
     Segment,
+    SEBlock,
     TorchVision,
     WorldDetect,
     v10Detect,
