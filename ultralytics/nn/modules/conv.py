@@ -322,21 +322,23 @@ class CBAM(nn.Module):
         
 
 class SEBlock(nn.Module):
-    def __init__(self, in_channels, reduction=16):
-        super(SEBlock, self).__init__()
-        self.avg_pool = nn.AdaptiveAvgPool2d(1)  # Global Average Pooling
-        self.fc = nn.Sequential(
-            nn.Linear(in_channels, in_channels // reduction, bias=False),
-            nn.ReLU(inplace=True),
-            nn.Linear(in_channels // reduction, in_channels, bias=False),
-            nn.Sigmoid()
-        )
+    """Squeeze-and-Excitation Block"""
+
+    def __init__(self, c1, reduction=16):
+        """Initialize SEBlock with input channels and reduction ratio."""
+        super().__init__()
+        self.global_avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.fc1 = nn.Conv2d(c1, c1 // reduction, kernel_size=1, bias=False)
+        self.act1 = nn.ReLU()
+        self.fc2 = nn.Conv2d(c1 // reduction, c1, kernel_size=1, bias=False)
+        self.act2 = nn.Sigmoid()
 
     def forward(self, x):
-        b, c, _, _ = x.size()  # Get batch and channel dimensions
-        y = self.avg_pool(x).view(b, c)  # Squeeze operation
-        y = self.fc(y).view(b, c, 1, 1)  # Excitation operation
-        return x * y.expand_as(x)  # Recalibrate features
+        """Forward pass of the SE block."""
+        scale = self.global_avg_pool(x)
+        scale = self.act1(self.fc1(scale))
+        scale = self.act2(self.fc2(scale))
+        return x * scale
 
 
 class Concat(nn.Module):
